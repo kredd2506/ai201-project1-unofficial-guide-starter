@@ -60,6 +60,8 @@ Atomic entries will be between 50-300 tokens.
 
 **Reasoning:** The corpus is structurally heterogeneous; the header/entry boundaries already mark the semantic units, so splitting on them preserves the answer bearing context, while a size cap + light overlap protects the few long setions.
 
+**Implementation note (Milestone 3):** Pure header-splitting produced many tiny "stub" sections (a heading + one transitional sentence) that aren't retrievable alone. Added a **parent-bounded merge** pass: consecutive sections sharing the same `##` parent are merged up to ~500 tokens, so stubs fold into their siblings while distinct top-level topics stay separate (limits the dilution risk from Challenge #2). Final corpus: **118 chunks** (median 209 tok, max 798, none truncated). Atomic FAQ/glossary entries kept one-per-chunk with no inter-entry overlap, as specified.
+
 ---
 
 ## Retrieval Approach
@@ -70,8 +72,8 @@ Atomic entries will be between 50-300 tokens.
      would you weigh in choosing a different embedding model — context length, multilingual
      support, accuracy on domain-specific text, latency? -->
 
-**Embedding model:** BAAI/bge-small-en-v1.5 via sentence transformers 
-might use MiniLM if cap chunks at 256 tokens
+**Embedding model:** nomic-ai/nomic-embed-text-v1.5 via sentence-transformers (768-dim, 8192-token window).
+*Changed during Milestone 3 (chunking).* Originally bge-small-en-v1.5, but its window is only **512 tokens** — it would silently truncate our 500–800-token guide chunks at embedding time (the exact coupling flagged in the chunking notes: max chunk ≤ model window). nomic-embed's **8192-token window** comfortably fits the full 800-token cap, so no chunk is truncated. bge-base/large are also 512, so they wouldn't solve it. Token counts are identical (both BERT WordPiece), so the chunk sizes are unaffected by the swap.
 
 **Top-k:** 5
 
@@ -155,8 +157,8 @@ Storage/scale — 768-dim vs 384-dim doubles your vector store size; trivial at 
 
    [1] Ingestion          [2] Chunking            [3] Embed + Store
   ┌───────────────┐     ┌────────────────┐     ┌──────────────────────┐
-  │ 17 NRP.ai doc │     │ structure-aware│     │ bge-small-en-v1.5    │
-  │ pages saved   │ ──▶ │ split + size   │ ──▶ │ (sentence-transf.)   │
+  │ 17 NRP.ai doc │     │ structure-aware│     │ nomic-embed-text     │
+  │ pages saved   │ ──▶ │ split + size   │ ──▶ │ v1.5 (sentence-tr.)  │
   │ to documents/ │     │ cap (headers / │     │        │             │
   │ (.md / .txt)  │     │ per-entry)     │     │        ▼             │
   └───────────────┘     └────────────────┘     │ vector store (FAISS) │
@@ -182,7 +184,7 @@ Storage/scale — 768-dim vs 384-dim doubles your vector store size; trivial at 
 |-------|----------------|
 | 1. Ingestion | NRP.ai doc pages saved as local `.md`/`.txt` in `documents/` |
 | 2. Chunking | Python — structure-aware splitter (header / per-entry) with recursive size cap |
-| 3. Embedding + Vector Store | `BAAI/bge-small-en-v1.5` via `sentence-transformers` → FAISS index |
+| 3. Embedding + Vector Store | `nomic-ai/nomic-embed-text-v1.5` (8192-token window) via `sentence-transformers` → FAISS index |
 | 4. Retrieval | Embed query, cosine similarity, top-k = 5 |
 | 5. Generation | LLM (Claude) conditioned on retrieved chunks, with source attribution |
 
