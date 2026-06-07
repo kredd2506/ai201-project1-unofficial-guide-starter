@@ -70,11 +70,18 @@ Atomic entries will be between 50-300 tokens.
      would you weigh in choosing a different embedding model — context length, multilingual
      support, accuracy on domain-specific text, latency? -->
 
-**Embedding model:**
+**Embedding model:** BAAI/bge-small-en-v1.5 via sentence transformers 
+might use MiniLM if cap chunks at 256 tokens
 
-**Top-k:**
+**Top-k:** 5
 
 **Production tradeoff reflection:**
+Accuracy on domain-specific text — NRP/Kubernetes jargon ("namespace", "pod", "Ceph RBD", kubelogin). A larger model (bge-large, or an API model like OpenAI text-embedding-3-large / Voyage voyage-3) embeds technical terms more faithfully → fewer near-miss retrievals. Best case: a domain-fine-tuned embedder.
+Context length — your longest guide sections + code blocks benefit from a bigger window (nomic's 8K) so nothing truncates. Trade: higher dim = more storage + slower search.
+Latency vs. accuracy — API models are more accurate but add network round-trips and per-query cost; local models are free and private but cap out lower. For an interactive guide, sub-second retrieval matters.
+Multilingual — likely not needed here (docs are English-only); honest to say you'd deprioritize it for this corpus, which shows you're reasoning about your domain rather than listing features.
+Storage/scale — 768-dim vs 384-dim doubles your vector store size; trivial at 17 docs, real at millions.
+
 
 ---
 
