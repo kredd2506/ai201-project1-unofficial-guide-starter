@@ -10,6 +10,9 @@
 ## Domain
 
 <!-- What domain did you choose? Why is this knowledge valuable and hard to find through official channels? -->
+The dommain is running research workloads on the NRP nautilus cluster ( from access, GPU/batch jobs, storage , LLMs, policies, troubleshooting, etc).
+It is valuable because NRP is a valuable NSF funded compute for students, profeesors and academia, but the initial onboarding can be a hard, especially for those not from a computer science domain. 
+the official channels, have a lot of doc pages, with a weak search and a single question often spans across multiple pages. And also the docs assume, that the users are fluent with Kubernetes and are aware of NRP's policies.
 
 ---
 

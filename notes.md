@@ -2,6 +2,47 @@
 
 > Running log of decisions, learnings, and pivots. Newest entries on top.
 
+
+Domain vs. source (the distinction the milestone cares about)
+Your domain is how to actually run research workloads on the NRP Nautilus cluster — getting access, running GPU/batch jobs, storage, hosted LLMs, policies, and troubleshooting. Your source is the NRP documentation site, and each doc page is one source document. That's a legitimate setup: the milestone explicitly counts "pages" as documents.
+One scoping note: the docs contain a big Admin guide (cluster upgrades, Ceph recovery, FIONA installs, etc.) aimed at people running the platform, not using it. I'd exclude the admin guide and scope to the user journey. That narrowing is what keeps your 10+ sources answering a range of user questions instead of drifting into an unrelated audience.
+Your 10+ source documents
+These are deliberately spread across access, policy, compute, storage, AI, and troubleshooting so they don't all say the same thing:
+
+Getting Started (access/login/kubectl) — https://nrp.ai/documentation/userdocs/start/getting-started
+Using Nautilus — https://nrp.ai/documentation/userdocs/start/using-nautilus
+Cluster Policies — https://nrp.ai/documentation/userdocs/start/policies
+FAQ — https://nrp.ai/documentation/userdocs/start/faq
+Glossary — https://nrp.ai/documentation/userdocs/start/glossary
+Asking for Support — https://nrp.ai/documentation/userdocs/start/support
+GPU pods — https://nrp.ai/documentation/userdocs/running/gpu-pods
+Running batch jobs — https://nrp.ai/documentation/userdocs/running/jobs
+Storage intro — https://nrp.ai/documentation/userdocs/storage/intro
+Persistent storage (Ceph FS/RBD) — https://nrp.ai/documentation/userdocs/storage/ceph
+Moving data in/out — https://nrp.ai/documentation/userdocs/storage/move-data
+NRP Managed LLM overview — https://nrp.ai/documentation/userdocs/ai/llm-managed
+Tutorial: Basic Kubernetes — https://nrp.ai/documentation/userdocs/tutorial/basic
+Tutorial: Debugging — https://nrp.ai/documentation/userdocs/tutorial/debugging
+
+That's 14, giving you headroom to drop a couple that turn out thin. One caution on the https://nrp.ai/live/ page you linked: it looks like a live/dynamic page, which makes a poor static RAG source (content changes, no stable facts to retrieve). Prefer the doc pages above. If you want genuine source-type variety, the AUP PDF (https://nrp.ai/NRP-AUP.pdf) is a different format you could add.
+What I noticed skimming (this drives Milestone 2)
+The pages are heterogeneous, and that's the single most important thing for your chunking design:
+
+Long guides (Getting Started) are multi-section, with headings, fenced code blocks, and callout admonitions ("Required", "Read it before using"). Key facts are spread across paragraphs and concentrated in callouts — e.g., "containers are stateless, your data is gone on restart" sits in a callout, while the kubelogin port-fix is buried in a code snippet.
+FAQ and Glossary are atomic — one Q&A or one term per unit, short and self-contained.
+
+So a single fixed chunk size will hurt you: the FAQ/glossary want per-entry chunks, while the long guides want header-delimited section chunks (and you'll want to keep code blocks intact rather than splitting mid-snippet). Flagging this now will make Milestone 2 much easier.
+5+ questions your system should answer
+Specific enough that you can verify the answer lives in your docs:
+
+How does a student get access to NRP Nautilus? (getting-started: log in via CILogon, then have your supervisor add you to their namespace)
+Why did my pod's data disappear after it restarted, and how do I prevent it? (getting-started + storage: containers are stateless; use a persistent volume)
+How do I request a GPU in my pod? (gpu-pods)
+What happens if I run a job with a sleep command? (policies/getting-started: you get banned)
+How do I fix the kubelogin "port 8000 already in use" error? (getting-started: --listen-address)
+What kinds of data am I not allowed to store on NRP? (disclaimer: no HIPAA/FERPA/FISMA/PID data)
+Which LLMs does NRP host and how do I access them? (llm-managed)
+
 ---
 
 ## 2026-06-07 — Pivot: dropping Georgia Tech, switching domain to NRP.ai
