@@ -14,8 +14,6 @@
      Example: "Student reviews of CS professors at [university] — useful because official
      course descriptions don't reflect teaching style, exam difficulty, or workload." -->
 
-This system covers student reviews of CS courses and professors at Georgia Tech — workload, grading difficulty, teaching quality, and degree planning. That knowledge is valuable because official catalog pages describe what a course *is* but never what it's actually like to take — its real workload, whether a professor grades fairly, or which section to pick. And because that experience lives scattered across Rate My Professors, grade-distribution tools, and unofficial student aggregators, there's no single place to ask questions like "which Algorithms professor is clearest?" or "is CS 3600 too heavy to pair with OS?"
-
 ---
 
 ## Document Sources
@@ -26,16 +24,16 @@ This system covers student reviews of CS courses and professors at Georgia Tech 
 
 | # | Source | Type | URL or file path |
 |---|--------|------|-----------------|
-| 1 | Rate My Professors — GT professors | Short opinion reviews | https://www.ratemyprofessors.com/search/professors/361?q=* |
-| 2 | Rate My Professors — GT school page | Short reviews (browse by dept) | https://www.ratemyprofessors.com/school/361 |
-| 3 | GT Scheduler — crawler data | Structured course/section/instructor JSON | https://gt-scheduler.github.io/crawler-v2/index.json (per-term, e.g. `202402.json`) |
-| 4 | OMSHub — OMSCS review dataset | Reviews + difficulty + workload-hours (JSON) | https://github.com/omshub/data/tree/main/data (e.g. `data/202402.json`) |
-| 5 | OMSCentral — OMSCS course reviews | Review aggregator + ratings (JS SPA → API) | https://www.omscentral.com/courses |
-| 6 | GT MATH undergraduate catalog | Structured course descriptions | https://catalog.gatech.edu/courses-undergrad/math/ |
-| 7 | GT Course Critique (Oscar) | Numeric grade distributions / GPA | https://critique.gatech.edu |
-| 8 | GT CS undergraduate catalog | Structured course descriptions/prereqs | https://catalog.gatech.edu/courses-undergrad/cs/ |
-| 9 | GT CS BS degree requirements | Requirements / Threads (prose) | https://catalog.gatech.edu/programs/computer-science-bs/ |
-| 10 | GT OMSCS — official current courses | Official grad course list/descriptions | https://omscs.gatech.edu/current-courses |
+| 1 | | | |
+| 2 | | | |
+| 3 | | | |
+| 4 | | | |
+| 5 | | | |
+| 6 | | | |
+| 7 | | | |
+| 8 | | | |
+| 9 | | | |
+| 10 | | | |
 
 ---
 
