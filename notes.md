@@ -2,6 +2,29 @@
 
 > Running log of decisions, learnings, and pivots. Newest entries on top.
 
+---
+
+## 2026-06-07 — Milestone 2 COMPLETED: planning.md fully drafted
+
+- **Documents table populated** in `planning.md` — settled on **17 NRP.ai user-doc pages** (added Tutorial: Introduction, Docker/Containers, and ML/Jupyter Pod to the original 14). Admin guide deliberately excluded — wrong audience.
+- **Chunking strategy = structure-aware with a recursive size cap.** Primary split is structural: header-based for the long guides, per-entry for FAQ/glossary, so one chunk = one idea.
+  - Chunk size: **500–800 tokens** for guide sections; atomic entries **50–300 tokens**.
+  - Overlap: **1–2 sentences (~80–120 tokens)**, applied only on sub-splits — not between independent FAQ/glossary entries (overlapping unrelated entries just adds noise).
+  - Rationale: the corpus is structurally heterogeneous, so a single fixed chunk size would hurt. Splitting on existing semantic boundaries preserves answer-bearing context; the size cap + light overlap protect the few long sections.
+- **Embedding model = `BAAI/bge-small-en-v1.5`** via sentence-transformers (384 dim, 512-token window).
+  - Picked over the default all-MiniLM-L6-v2 because MiniLM's **256-token cap would truncate the 500–800-token guide chunks** — the exact failure the chunking design avoids. bge-small keeps similar speed/dims but fits the chunks. Fallback: MiniLM *only* if chunk cap drops to 256.
+  - Coupling to remember: max chunk size must stay ≤ the model's token window, or we embed truncated text.
+- **Top-k = 5.** Several test questions (access flow, stateless-data fix) need facts spanning 2+ docs, so k=3 risks dropping a source; k=5 is the RAG sweet spot. May tune down to 3 for atomic queries after eval.
+- **Production reflection** written: domain-jargon accuracy and context length are the levers worth paying for; multilingual deprioritized (English-only corpus); noted the 768-vs-384 dim storage tradeoff.
+- **Evaluation Plan = 5 questions with doc-verified expected answers.** Fetched the live NRP pages (getting-started, policies, gpu-pods, AUP) and confirmed each expected answer verbatim; fixed Q5's attribution (the HIPAA/FERPA/FISMA/PID disclaimer lives in the site disclaimer/AUP, not the policies body) and sharpened Q3 with the real `nvidia.com/gpu` syntax + limits (≤2/pod, ≤8/node for jobs).
+- **Anticipated Challenges = 3:** (1) code/YAML split across chunk boundaries, (2) off-topic retrieval from jargon reused across pages (representation dilution), (3) stale instructions / version drift — deliberately spanning retrieval-quality, retrieval-precision, and data-freshness.
+- **Architecture:** ASCII diagram split into Indexing (ingest → chunk → embed/FAISS) and Query (question → retrieve top-5 → generate) phases, plus a stage→tool table. Open picks: vector store = FAISS (vs Chroma), generation LLM = Claude (could swap to an NRP-managed LLM for thematic tie-in).
+- **AI Tool Plan:** per-milestone (M3 ingest/chunk, M4 embed/retrieve, M5 generate/interface), each naming tool · input planning section · expected output · verification — verification loops back to the 5 eval questions as the acceptance test.
+- **Status:** every planning.md section now filled (Domain → AI Tool Plan). Milestone 2 deliverable complete.
+- **Commits:** `a64bfe5` (docs table), `138a697` (chunking + retrieval), then this commit (eval/challenges/architecture/AI-tool-plan). Pushed to origin/main.
+- **Next (Milestone 3):** implement `ingest.py` + `chunk.py` per the AI Tool Plan; populate `documents/`.
+
+---
 
 Domain vs. source (the distinction the milestone cares about)
 Your domain is how to actually run research workloads on the NRP Nautilus cluster — getting access, running GPU/batch jobs, storage, hosted LLMs, policies, and troubleshooting. Your source is the NRP documentation site, and each doc page is one source document. That's a legitimate setup: the milestone explicitly counts "pages" as documents.
