@@ -6,8 +6,8 @@ saves the raw HTML for reproducibility, then extracts the substantive content
 and writes clean Markdown into documents/.
 
 Markdown is the chosen intermediate format because the chunking strategy
-(chunk.py) is structure-aware: headings -> `#` and code blocks -> fenced
-``` blocks give chunk.py the section/code boundaries it splits on.
+(chunking.py) is structure-aware: headings -> `#` and code blocks -> fenced
+``` blocks give chunking.py the section/code boundaries it splits on.
 
 What gets kept vs. removed
   KEEP: the page body (div.sl-markdown-content) — prose, lists, tables, and

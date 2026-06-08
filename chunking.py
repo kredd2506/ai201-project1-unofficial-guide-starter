@@ -25,7 +25,7 @@ the embedder sees.
 Output: chunks.jsonl, one JSON record per line:
   {id, doc, type, section, source_url, token_count, text}
 
-Run:  python chunk.py
+Run:  python chunking.py
 """
 
 import glob

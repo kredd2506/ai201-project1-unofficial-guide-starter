@@ -1,7 +1,7 @@
 """
 Stage 3 of the RAG pipeline: embedding + vector store.
 
-Reads chunks.jsonl (from chunk.py), embeds every chunk with
+Reads chunks.jsonl (from chunking.py), embeds every chunk with
 nomic-ai/nomic-embed-text-v1.5, and loads the vectors into a persistent
 ChromaDB collection along with per-chunk metadata for later attribution.
 

@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-06-07 — Milestone 5 COMPLETED: grounded generation + Gradio UI
+
+Built the last two stages: `generate.py` (the RAG loop) and `app.py` (a Gradio web UI). What we actually learned:
+
+- **Grounding has to be *enforced*, not requested.** A polite "please use the context" prompt is not enough. Three mechanisms together make it real:
+  1. **System prompt as a hard contract** — answer from the numbered context ONLY, "the context wins" if it disagrees with the model's own knowledge, cite every claim by its `[n]`, and `temperature=0` to keep the wording close to the source.
+  2. **An exact refusal sentinel.** The prompt forces one verbatim sentence ("I don't have enough information on that.") when the context can't answer. We match that string *in code* to decide whether to show sources — so refusal is a programmatic signal, not just text.
+  3. **Attribution computed in code, never trusted to the LLM.** `format_sources()` builds the "Retrieved from" list straight from `search()` metadata (doc / section / URL), de-duped per document. Even if the model forgets to cite, the user still sees the true sources; on a refusal we *suppress* the list because nothing backed the answer. This was the explicit grading point — attribution must be guaranteed, not LLM-generated.
+- **The real grounding test is "could this answer have come from anywhere else?"** Verified end-to-end: the GPU answer returns the doc's *exact* `nvidia.com/gpu` YAML, the prohibited-data answer returns the *exact* HIPAA/PID/FISMA/FERPA list — content that couldn't be generic training knowledge. And an out-of-domain query ("best pizza topping?") was correctly *refused* with no sources, instead of a plausible hallucination.
+- **Never name a local module after a stdlib module.** Our `chunk.py` silently shadowed Python's stdlib `chunk`, and on Python 3.9 that broke Gradio at import (`gradio → pydub → wave → from chunk import Chunk` resolved to *our* file). The cwd is first on `sys.path`, so the collision only bites from inside the project dir — a nasty, non-obvious failure. Fix: renamed `chunk.py → chunking.py` (nothing imports it as a module; it only writes `chunks.jsonl`). This footgun disappears on Python 3.13+, where `wave` no longer imports `chunk` — version-specific bugs like this are exactly why we pin and test in the real venv.
+- **Pin against the *actual* interpreter, not the template default.** The template suggested `gradio>=6.9.0`, but that needs Python ≥3.10 and our venv is 3.9 — so we pinned `gradio==4.44.1` (the newest 3.9-compatible release; the `Blocks/Textbox/Button/click/submit` skeleton is identical on 6.x).
+- **Spec divergence to record:** planning.md's AI Tool Plan said "CLI/Streamlit"; we built **Gradio** instead (better for a no-narration demo video). Worth noting in the README's Spec Reflection.
+- **Still open:** fill the README's Grounded Generation / Evaluation Report / AI Usage sections (run all 5 eval queries end-to-end for the report table).
+
+---
+
 ## 2026-06-07 — Milestone 2 COMPLETED: planning.md fully drafted
 
 - **Documents table populated** in `planning.md` — settled on **17 NRP.ai user-doc pages** (added Tutorial: Introduction, Docker/Containers, and ML/Jupyter Pod to the original 14). Admin guide deliberately excluded — wrong audience.
@@ -22,7 +38,7 @@
 - **AI Tool Plan:** per-milestone (M3 ingest/chunk, M4 embed/retrieve, M5 generate/interface), each naming tool · input planning section · expected output · verification — verification loops back to the 5 eval questions as the acceptance test.
 - **Status:** every planning.md section now filled (Domain → AI Tool Plan). Milestone 2 deliverable complete.
 - **Commits:** `a64bfe5` (docs table), `138a697` (chunking + retrieval), then this commit (eval/challenges/architecture/AI-tool-plan). Pushed to origin/main.
-- **Next (Milestone 3):** implement `ingest.py` + `chunk.py` per the AI Tool Plan; populate `documents/`.
+- **Next (Milestone 3):** implement `ingest.py` + `chunking.py` per the AI Tool Plan; populate `documents/`.
 
 ---
 

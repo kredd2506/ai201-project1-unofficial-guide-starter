@@ -8,8 +8,11 @@ requests==2.32.5
 beautifulsoup4==4.12.3
 markdownify==0.13.1
 
-# Query interface — add whichever you use for Milestone 5:
-# gradio>=6.9.0
+# Query interface (app.py) — Gradio web UI for Milestone 5.
+# Template default is gradio>=6.9.0, but that needs Python >=3.10; this project's
+# venv is Python 3.9, so we pin the newest 3.9-compatible release. The app.py
+# code (Blocks/Textbox/Button/click/submit) is unchanged on 6.x if you upgrade.
+gradio==4.44.1
 # streamlit>=1.40.0
 
 # Document ingestion — add if your documents/ folder contains .pdf files:

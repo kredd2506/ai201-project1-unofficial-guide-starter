@@ -205,7 +205,7 @@ Storage/scale — 768-dim vs 384-dim doubles your vector store size; trivial at 
 
 **Milestone 3 — Ingestion and chunking:**
 - **Tool:** Claude (Claude Code).
-- **Input:** the Documents table (17 NRP.ai URLs) plus the Chunking Strategy section. I'll ask it to write `ingest.py` (fetch each page, strip nav/HTML, save clean `.md`/`.txt` into `documents/`) and `chunk.py` implementing the structure-aware splitter — header-based for guides, per-entry for FAQ/glossary, with the 500–800-token cap (50–300 for atomic entries), ~1–2 sentence overlap on sub-splits only, and code fences kept intact.
+- **Input:** the Documents table (17 NRP.ai URLs) plus the Chunking Strategy section. I'll ask it to write `ingest.py` (fetch each page, strip nav/HTML, save clean `.md`/`.txt` into `documents/`) and `chunking.py` implementing the structure-aware splitter — header-based for guides, per-entry for FAQ/glossary, with the 500–800-token cap (50–300 for atomic entries), ~1–2 sentence overlap on sub-splits only, and code fences kept intact.
 - **Expected output:** two scripts and a `chunks.jsonl` where each record has `{text, source_url, section}`.
 - **Verify:** spot-check that no chunk splits a fenced code block, that FAQ/glossary chunks are one entry each, and that chunk token counts fall in the stated ranges; eyeball 5–10 chunks against the live pages.
 
