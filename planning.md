@@ -40,6 +40,7 @@ the official channels, have a lot of doc pages, with a weak search and a single 
 | 15 | Tutorial: Docker and Containers | Container fundamentals and building images for the cluster | https://nrp.ai/documentation/userdocs/tutorial/docker |
 | 16 | Tutorial: Debugging | Fixing pods that won't start and other troubleshooting | https://nrp.ai/documentation/userdocs/tutorial/debugging |
 | 17 | ML/Jupyter Pod | Running a Jupyter notebook pod for interactive ML work | https://nrp.ai/documentation/userdocs/jupyter/jupyter-pod |
+| 18 | Disclaimers | Protected-data policy (no HIPAA/PID/FISMA/FERPA storage) — extracted section only; added in Milestone 4 to cover eval Q5 | https://nrp.ai/documentation/#disclaimers |
 
 ---
 
@@ -100,7 +101,7 @@ Storage/scale — 768-dim vs 384-dim doubles your vector store size; trivial at 
 | 2 | Why did the data in my pod disappear after it restarted, and how do I prevent it? | Containers are stateless — all data is gone forever when the container restarts unless it is stored on a persistent volume. To keep data, store it on persistent storage such as a Ceph PVC. (Source: Getting Started / Storage) |
 | 3 | How do I request a GPU for my pod? | Add `nvidia.com/gpu` to the container's `resources.limits` (and `requests`) in the pod/job YAML, e.g. `nvidia.com/gpu: 1`. Limits: up to 2 GPUs per pod, up to 8 per node for jobs; specific high-memory GPUs use a typed resource like `nvidia.com/a100`. (Source: GPU Pods) |
 | 4 | What happens if I run a job with a `sleep` command (or any command that never ends)? | You will be banned from using the cluster. Jobs must run a real workload and exit on their own; a `Job` with a `sleep` command or equivalent (any command that never ends by itself) is prohibited. (Source: Cluster Policies / Getting Started) |
-| 5 | What types of data am I not allowed to store on NRP? | NRP has no storage suitable for protected data — HIPAA, PID, FISMA, or FERPA-protected data of any kind may not be stored on NRP machines. (Source: NRP site disclaimer / Acceptable Use Policy) |
+| 5 | What types of data am I not allowed to store on NRP? | NRP has no storage suitable for protected data — HIPAA, PID, FISMA, or FERPA-protected data of any kind may not be stored on NRP machines. (Source: Disclaimers, https://nrp.ai/documentation/#disclaimers) |
 
 ---
 
@@ -161,7 +162,7 @@ Storage/scale — 768-dim vs 384-dim doubles your vector store size; trivial at 
   │ pages saved   │ ──▶ │ split + size   │ ──▶ │ v1.5 (sentence-tr.)  │
   │ to documents/ │     │ cap (headers / │     │        │             │
   │ (.md / .txt)  │     │ per-entry)     │     │        ▼             │
-  └───────────────┘     └────────────────┘     │ vector store (FAISS) │
+  └───────────────┘     └────────────────┘     │ vector store: Chroma │
                                                 └──────────┬───────────┘
                                                            │
   ┌────────────────────────────────────────────────────────┼─────────────┐
@@ -184,7 +185,7 @@ Storage/scale — 768-dim vs 384-dim doubles your vector store size; trivial at 
 |-------|----------------|
 | 1. Ingestion | NRP.ai doc pages saved as local `.md`/`.txt` in `documents/` |
 | 2. Chunking | Python — structure-aware splitter (header / per-entry) with recursive size cap |
-| 3. Embedding + Vector Store | `nomic-ai/nomic-embed-text-v1.5` (8192-token window) via `sentence-transformers` → FAISS index |
+| 3. Embedding + Vector Store | `nomic-ai/nomic-embed-text-v1.5` (8192-token window) via `sentence-transformers` → ChromaDB (cosine) |
 | 4. Retrieval | Embed query, cosine similarity, top-k = 5 |
 | 5. Generation | LLM (Claude) conditioned on retrieved chunks, with source attribution |
 
@@ -210,9 +211,16 @@ Storage/scale — 768-dim vs 384-dim doubles your vector store size; trivial at 
 
 **Milestone 4 — Embedding and retrieval:**
 - **Tool:** Claude.
-- **Input:** the Retrieval Approach section. I'll ask it to write `embed.py` (encode every chunk with `BAAI/bge-small-en-v1.5` via sentence-transformers, build a FAISS index, persist index + metadata) and `retrieve.py` (`search(query, k=5)` returning the top-k chunks with their source URLs and scores).
-- **Expected output:** a built FAISS index plus a `search()` function that returns ranked chunks with attribution.
-- **Verify:** run each of the 5 Evaluation Plan questions through `search()` and confirm the correct source doc appears in the top-5 (e.g. the GPU question returns the gpu-pods chunk); check that bge's query prefix/normalization is applied so scores are sensible.
+- **Input:** the Retrieval Approach section. I'll ask it to write `embed.py` (encode every chunk with `nomic-ai/nomic-embed-text-v1.5` via sentence-transformers, store vectors + metadata in a persistent ChromaDB collection) and `retrieve.py` (`search(query, k=5)` returning the top-k chunks with their source URLs and cosine distances).
+- **Expected output:** a built ChromaDB collection plus a `search()` function that returns ranked chunks with attribution.
+- **Verify:** run each of the 5 Evaluation Plan questions through `search()` and confirm the correct source doc appears in the top-5 (e.g. the GPU question returns the gpu-pods chunk); check that nomic's `search_query:`/`search_document:` prefixes and L2-normalization are applied so cosine distances are sensible.
+
+**Milestone 4 — retrieval results (run on the 5 eval queries, top-k=5):**
+- **Q1 access** ✅ rank 1 = `getting-started / Get access and log in` (dist 0.16).
+- **Q2 data lost on restart** ✅ (with a caveat) the answer is retrieved at **rank 5** — last slot in top-5 — behind three vocabulary-overlap distractors ("pod stuck Terminating", `kubectl delete/create`, batch-job logs) that share words like *pod/restart/delete* without answering the question. **Known limitation, deliberately left as-is.** Root cause: the answer ("Containers are stateless… data gone forever… unless a persistent volume") sits inside a *merged 3-topic* `getting-started` chunk (namespace-token-refresh + the stateless warning + external links), which dilutes its embedding (Challenge #2). Investigated fixes before deciding: isolating the warning callout as its own chunk would lift Q2 to **rank 2** (measured: dist 0.316→0.275), but we chose not to re-chunk since k=5 already captures the answer and the generator will see it. Notable finding from the investigation: the *clean, focused* glossary "Stateless" entry ranks only **37th** for this query — its abstract definition never says "data lost / restart / persistent volume", showing that content/intent alignment, not chunk cleanliness alone, drives retrieval.
+- **Q3 GPU** ✅ ranks 2–5 all `gpu-pods`, incl. the YAML with `nvidia.com/gpu` (dist 0.20).
+- **Q4 sleep job** ✅ right sources in top-5 (`jobs`, `policies`).
+- **Q5 prohibited data (HIPAA/FERPA/FISMA)** — *first run:* ❌ **corpus-coverage gap, not a retrieval bug.** A `grep` confirmed no ingested chunk mentioned HIPAA/FERPA/FISMA: the answer lived only in the **Disclaimers** section of the docs landing page (`/documentation/#disclaimers`), which was not one of the 17 ingested user-doc pages. *Fix:* extended `ingest.py` to extract **only** that disclaimer section into `disclaimers.md` (source #18) — ingesting the whole landing page would have buried the policy among navigation link-cards and diluted its embedding (Challenge #2). *After re-embedding (119 chunks):* ✅ rank 1 = `disclaimers / Disclaimers` (dist **0.171**), with a wide margin to rank 2 (0.332). **All 5 eval queries now retrieve their answer in the top-5.** This is the milestone's intended lesson: testing retrieval before generation surfaced a corpus gap that would otherwise have looked like an LLM hallucination at Milestone 5.
 
 **Milestone 5 — Generation and interface:**
 - **Tool:** Claude (both to write the code and as the answer-generating LLM at runtime).

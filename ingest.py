@@ -52,6 +52,15 @@ DOCS_DIR = Path("documents")
 RAW_DIR = DOCS_DIR / "raw"
 HEADERS = {"User-Agent": "Mozilla/5.0 (RAG course project; ingestion script)"}
 
+# The protected-data disclaimer (HIPAA/PID/FISMA/FERPA) lives ONLY on the docs
+# landing page, not on any of the 17 user-doc pages above — evaluation query #5
+# can't be answered without it. We extract just the "Disclaimers" section rather
+# than ingesting the whole landing page, which is otherwise navigation link-cards
+# that would only dilute the disclaimer's embedding (Anticipated Challenge #2).
+DISCLAIMER_SLUG = "disclaimers"
+DISCLAIMER_URL = "https://nrp.ai/documentation/"
+DISCLAIMER_ANCHOR = "#disclaimers"
+
 
 class NRPConverter(MarkdownConverter):
     """Emit fenced code blocks tagged with the page's data-language attribute."""
@@ -118,9 +127,37 @@ def clean_to_markdown(html: str, url: str) -> str:
     return f"# {title}\n\nSource: {url}\n\n{md}\n"
 
 
+def extract_disclaimer(html: str, url: str) -> str:
+    """Pull only the `<h3 id="disclaimers">` section (heading + its paragraphs)
+    off the landing page, as a small standalone Markdown doc. Keeps the
+    protected-data policy as one focused chunk instead of burying it in the
+    page's navigation cards."""
+    soup = BeautifulSoup(html, "html.parser")
+    head = soup.find(id=DISCLAIMER_SLUG)
+    if head is None:
+        raise ValueError(f"no #{DISCLAIMER_SLUG} section found on {url}")
+    title = head.get_text(strip=True)
+    paras = []
+    for sib in head.find_next_siblings():
+        if sib.name in ("h1", "h2", "h3", "h4"):  # stop at the next section
+            break
+        if sib.name == "p":
+            txt = sib.get_text(" ", strip=True)
+            # Joining inline <strong> tags with " " leaves a space before
+            # punctuation ("HIPAA , PID"); tidy it back up.
+            txt = re.sub(r"\s+([,.;:])", r"\1", txt)
+            if txt:
+                paras.append(txt)
+    if not paras:
+        raise ValueError(f"#{DISCLAIMER_SLUG} section had no body text on {url}")
+    body = "\n\n".join(paras)
+    src = url.rstrip("/") + "/" + DISCLAIMER_ANCHOR
+    return f"# {title}\n\nSource: {src}\n\n## {title}\n\n{body}\n"
+
+
 def main():
     RAW_DIR.mkdir(parents=True, exist_ok=True)
-    print(f"Ingesting {len(SOURCES)} pages -> {DOCS_DIR}/\n")
+    print(f"Ingesting {len(SOURCES)} pages + disclaimer -> {DOCS_DIR}/\n")
     rows = []
     for slug, url in SOURCES:
         try:
@@ -135,9 +172,21 @@ def main():
             print(f"  FAIL {slug:<24} {e}")
         time.sleep(0.5)  # be polite to the server
 
+    # Landing-page disclaimer (extracted section, not the whole page).
+    try:
+        html = fetch(DISCLAIMER_URL)
+        (RAW_DIR / f"{DISCLAIMER_SLUG}.html").write_text(html, encoding="utf-8")
+        md = extract_disclaimer(html, DISCLAIMER_URL)
+        (DOCS_DIR / f"{DISCLAIMER_SLUG}.md").write_text(md, encoding="utf-8")
+        rows.append((DISCLAIMER_SLUG, len(md), "ok"))
+        print(f"  ok   {DISCLAIMER_SLUG:<24} {len(md):>7,} chars")
+    except Exception as e:
+        rows.append((DISCLAIMER_SLUG, 0, f"FAIL: {e}"))
+        print(f"  FAIL {DISCLAIMER_SLUG:<24} {e}")
+
     ok = sum(1 for _, _, s in rows if s == "ok")
-    print(f"\nDone: {ok}/{len(SOURCES)} pages written to {DOCS_DIR}/")
-    if ok < len(SOURCES):
+    print(f"\nDone: {ok}/{len(rows)} pages written to {DOCS_DIR}/")
+    if ok < len(rows):
         print("Some pages failed — see FAIL rows above.")
 
 
